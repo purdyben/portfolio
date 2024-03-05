@@ -1,0 +1,7 @@
+  /* Define a class for the green square */
+.green-square {
+  width: 10;
+  height: 10px;
+  background-color: green;
+  border-color: black;
+}
