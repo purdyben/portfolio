@@ -5,14 +5,15 @@ import (
 	"syscall/js"
 )
 
-func CreateBoardHtml(id string, g *Game) {
+func CreateBoardHtml(id string, rows, cols int) {
+	fmt.Println(rows, cols)
 	global := js.Global()
 	document := global.Get("document")
 
 	html := ""
-	for y := range g.Height {
+	for y := range rows {
 		// html += "<div id=row" + strconv.Itoa(y) + ">"
-		for x := range g.Width {
+		for x := range cols {
 			html += `<div> 
 				<div id=` + fmt.Sprintf("cell%d-%d", x, y) + ` class="grid-cell"></div>
 			</div>`

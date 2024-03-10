@@ -13,13 +13,13 @@ import (
  * cellCss css placed on each cell
  * gridCss css placed on grid container
  */
-func CreateGrid(elementId, cellCss, gridCss string) {
+func CreateGrid(elementId, cellCss, gridCss string, rows, cols int) {
 	global := js.Global()
 	document := global.Get("document")
 
 	html := ""
-	for y := range g.Height {
-		for x := range g.Width {
+	for y := range rows {
+		for x := range cols {
 			html += fmt.Sprintf(`<div><div id=%s class="%s"></div></div>`,
 				Cellid(x, y), cellCss)
 		}
@@ -34,9 +34,12 @@ func CreateGrid(elementId, cellCss, gridCss string) {
 
 func RootStyleSetProperty(args ...any) js.Value {
 	return js.Global().Get("document").Get("documentElement").Get("style").Call("setProperty", args...)
-
 }
 
 func Cellid(x, y int) string {
 	return fmt.Sprintf("cell%d-%d", x, y)
+}
+
+func Console(args ...any) {
+	js.Global().Get("console").Call("log", args...)
 }

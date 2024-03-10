@@ -19,6 +19,7 @@ func (g *GameGrid) IN(x, y int) bool {
 	}
 	return true
 }
+
 func NewCoordinate(x, y int) Coordinate {
 	return Coordinate{x, y}
 }
@@ -26,6 +27,7 @@ func NewCoordinate(x, y int) Coordinate {
 func (c *Coordinate) X() int {
 	return c.x
 }
+
 func (c *Coordinate) Y() int {
 	return c.y
 }

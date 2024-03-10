@@ -26,45 +26,41 @@ export const wasmBrowserInstantiate = async (wasmModuleUrl, importObject) => {
 
 const go = new Go(); // Defined in wasm_exec.js. Don't forget to add this in your index.html.
 
-const runWasmAdd = async () => {
-  // Get the importObject from the go instance.
-  const importObject = go.importObject;
+// const runWasmAdd = async () => {
+//   // Get the importObject from the go instance.
+//   const importObject = go.importObject;
 
-  // Instantiate our wasm module
-  const wasmModule = await wasmBrowserInstantiate("./main.wasm", importObject);
+//   // Instantiate our wasm module
+//   const wasmModule = await wasmBrowserInstantiate("./main.wasm", importObject);
 
-  // Allow the wasm_exec go instance, bootstrap and execute our wasm module
-  go.run(wasmModule.instance);
-
-  
-
-  // Set the result onto the body
-  document.body.textContent = `Hello World! addResult: ${addResult}`;
-  // Call the Add function export from wasm, save the result
-  const addResult = wasmModule.instance.exports.add(24, 24);
-};
-runWasmAdd();
+//   // Allow the wasm_exec go instance, bootstrap and execute our wasm module
+//   go.run(wasmModule.instance);
+//   // Set the result onto the body
+//   // document.body.textContent = `Hello World! addResult: ${addResult}`;
+//   // Call the Add function export from wasm, save the result
+//   // const addResult = wasmModule.instance.exports.add(24, 24);
+// };
+// runWasmAdd();
 
 const runSnake = async () => {
-  // Get the importObject from the go instance.
   const importObject = go.importObject;
-  // Instantiate our wasm module
-  const wasmModule = await wasmBrowserInstantiate("./wasm/snake.wasm", importObject);
-  // Allow the wasm_exec go instance, bootstrap and execute our wasm module
-  go.run(wasmModule.instance);
-  // // Call the Add function export from wasm, save the result
-  // const addResult = wasmModule.instance.exports.add(24, 24);
-};
-
-const runPong = async () => {
-  const importObject = go.importObject;
-  const wasmModule = await wasmBrowserInstantiate("./wasm/pong.wasm", importObject);
+  const wasmModule = await wasmBrowserInstantiate("wasm/snake.wasm", importObject);
   go.run(wasmModule.instance);
 };
 
-const runLife = async () => {
-  const importObject = go.importObject;
-  const wasmModule = await wasmBrowserInstantiate("./wasm/life.wasm", importObject);
-  go.run(wasmModule.instance);
-};
+runSnake()
+
+// const runPong = async () => {
+//   let g = new Go();
+//   const pongWasmModule = await wasmBrowserInstantiate(fetch("wasm/pong.wasm"), g.importObject);
+//   g.run(pongWasmModule.instance);
+// };
+
+// runPong()
+
+// const runLife = async () => {
+//   const importObject = go.importObject;
+//   const wasmModule = await wasmBrowserInstantiate("./wasm/life.wasm", importObject);
+//   go.run(wasmModule.instance);
+// };
 
