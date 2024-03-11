@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"syscall/js"
-	"time"
 
 	"wasm/internal/games"
 	"wasm/internal/jsutil"
@@ -23,7 +22,7 @@ func Stop(t *games.GameTicker) js.Func {
 	return js.FuncOf(
 		func(this js.Value, args []js.Value) interface{} {
 			t.Stop()
-			jsutil.Console("start")
+			jsutil.Console("stop")
 			return nil
 		})
 }
@@ -31,7 +30,8 @@ func Stop(t *games.GameTicker) js.Func {
 func Restart(t *games.GameTicker) js.Func {
 	return js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		jsutil.Console("Reset")
-		t.Reset(1 * time.Second)
+		// t.Reset(1 * time.Second)
+
 		return nil
 	})
 }

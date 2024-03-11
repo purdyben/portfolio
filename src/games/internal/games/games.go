@@ -20,6 +20,10 @@ func (g *GameGrid) IN(x, y int) bool {
 	return true
 }
 
+func (c1 Coordinate) Equal(c2 Coordinate) bool {
+	return c1.x == c2.x && c1.y == c2.y
+}
+
 func NewCoordinate(x, y int) Coordinate {
 	return Coordinate{x, y}
 }

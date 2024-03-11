@@ -63,15 +63,18 @@ func (t *GameTicker) Tick() chan int {
 // }
 
 func (t *GameTicker) Stop() {
+	defer recover()
 	t.Ticker.Stop()
 	t.paused = true
 }
 
 func (t *GameTicker) Start() {
+	defer recover()
 	t.Ticker.Reset(t.delay)
 }
 
 func (t *GameTicker) Reset(d time.Duration) {
+	defer recover()
 	t.Ticker.Reset(d)
 	// if t.paused {
 	// 	t.Resume()

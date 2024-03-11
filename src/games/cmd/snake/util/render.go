@@ -9,7 +9,7 @@ import (
 
 func Render(g *snake.GameObject) {
 	for row := range g.Rows() {
-		for col := range snake.Game().Cols() {
+		for col := range g.Cols() {
 			SetCellGrass(row, col)
 		}
 	}
@@ -19,8 +19,8 @@ func Render(g *snake.GameObject) {
 		SetCellSnake(curr.X(), curr.Y())
 		curr = curr.Next
 	}
-	// snake.UpdateApple(snake.Game())
-	SetCellApple(g.Apple.Coord.X(), g.Apple.Coord.Y())
+	ac := g.Apple().Coord()
+	SetCellApple(ac.X(), ac.Y())
 }
 
 func SetCellSnake(x, y int) {
@@ -28,7 +28,6 @@ func SetCellSnake(x, y int) {
 }
 
 func SetCellApple(x, y int) {
-	fmt.Println(x, y)
 	setCellCss("grid-cell-apple", x, y)
 }
 

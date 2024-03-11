@@ -1,6 +1,7 @@
 package snake
 
 import (
+	"fmt"
 	"sync"
 
 	"wasm/internal/games"
@@ -24,6 +25,9 @@ func NewSnake(x int, y int) *Snake {
 }
 
 func (s *Snake) AddNode(x, y int) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	curr := last(s.head)
 	curr.Next = games.NewNode(x, y)
 }
@@ -32,27 +36,31 @@ func (s *Snake) Head() *games.Node {
 	return s.head
 }
 
-func (s *Snake) UpdateBasedOnVelocity() {
+func (s *Snake) UpdateBasedOnVelocity(rows, cols int) int {
 	if s.head == nil {
 		panic("head is missing")
 	}
 	s.mu.Lock()
-	s.mu.Unlock()
+	defer s.mu.Unlock()
 
 	yVel := s.rowVelocity
 	xVel := s.columnVelocity
 	y := s.head.Y()
 	x := s.head.X()
 
-	if y+yVel < 0 || y+yVel > game.Rows() {
-		yVel = 0
+	if y+yVel < 0 || y+yVel > rows-1 {
+		fmt.Println("Collision x old %s new %s", y, y+yVel)
+		return EventBounderyCollision
 	}
-	if x+xVel < 0 || x+xVel > game.Cols() {
-		yVel = 0
+	if x+xVel < 0 || x+xVel > cols-1 {
+		fmt.Printf("Collision x old %s new %s", x, x+xVel)
+		return EventBounderyCollision
 	}
-	n := games.NewNode(x+xVel, y+yVel)
 
+	n := games.NewNode(x+xVel, y+yVel)
 	updateSnake(s, n)
+
+	return -1
 }
 
 func updateSnake(s *Snake, newHead *games.Node) {
@@ -76,6 +84,9 @@ func updateSnake(s *Snake, newHead *games.Node) {
 }
 
 func (s *Snake) SetHead(newHead *games.Node) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	newHead.Next = s.head.Next
 	s.head = newHead
 }
@@ -85,15 +96,21 @@ func (s *Snake) Velocity() (int, int) {
 }
 
 func (s *Snake) SetVelocity(r, c int) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	s.rowVelocity = r
 	s.columnVelocity = c
 }
 
 func (s *Snake) SetRowVelocity(i int) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	s.rowVelocity = i
 }
 
 func (s *Snake) SetColumnVelocity(i int) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	s.rowVelocity = i
 }
 

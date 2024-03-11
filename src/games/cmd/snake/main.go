@@ -1,13 +1,16 @@
 package main
 
 import (
+	"context"
 	_ "embed"
 	"fmt"
+	"sync"
 	"syscall/js"
 	"time"
 
 	"wasm/cmd/snake/util"
 	"wasm/internal/games"
+	"wasm/internal/games/math"
 	"wasm/internal/jsutil"
 	"wasm/snake"
 )
@@ -17,25 +20,64 @@ var (
 	global    = js.Global()
 	document  = global.Get("document")
 
-	ticker = games.NewTicker(80 * time.Millisecond)
+	boardRows = 20
+	boardCols = 20
+
+	gameContext, gameCancel = context.WithCancel(context.Background())
+	ticker                  *games.GameTicker
+	_game                   *snake.GameObject
+	mu                      sync.Mutex
 )
 
 func init() {
-	userInput = make(chan string, 10)
 	// js.Global().Set("updateRow", js.FuncOf(updateGameView))
-	ResetGame()
-	jsutil.RootStyleSetProperty("--board-rows", snake.Game().Rows())
-	jsutil.RootStyleSetProperty("--board-cols", snake.Game().Cols())
+
+	ticker = games.NewTicker(90 * time.Millisecond)
 
 	fmt.Println("Setting Controls")
-	js.Global().Set("snakeStop", util.Stop(ticker))
+	js.Global().Set("snakeStop", js.FuncOf(
+		func(this js.Value, args []js.Value) interface{} {
+			ticker.Stop()
+			jsutil.Console("stop")
+			return nil
+		}))
 	js.Global().Set("snakeStart", js.FuncOf(
 		func(this js.Value, args []js.Value) interface{} {
 			jsutil.Console("start")
 			ticker.Start()
 			return "hellp"
 		}))
-	js.Global().Set("snakeRestart", util.Restart(ticker))
+	js.Global().Set("snakeRestart", js.FuncOf(
+		func(this js.Value, args []js.Value) interface{} {
+			exitGame()
+			startGame()
+			snake.UpdateApple(Game())
+			jsutil.Console("restart")
+			snake.CreateBoardHtml("GameContainer", Game().Rows(), Game().Cols())
+			util.Render(Game())
+			return ""
+		}))
+
+	js.Global().Set("updateApple", js.FuncOf(
+		func(this js.Value, args []js.Value) interface{} {
+			snake.UpdateApple(Game())
+			return ""
+		}))
+
+	jsutil.RootStyleSetProperty("--board-rows", boardRows)
+	jsutil.RootStyleSetProperty("--board-cols", boardCols)
+}
+
+func Game() *snake.GameObject {
+	mu.Lock()
+	defer mu.Unlock()
+	return _game
+}
+
+func SetGame(g *snake.GameObject) {
+	mu.Lock()
+	defer mu.Unlock()
+	_game = g
 }
 
 // Declare a main function, this is the entrypoint into our go module
@@ -44,65 +86,98 @@ func main() {
 	insertHtml("game", `<div>Snake</div>
 						<button onclick="snakeStart()">Start</button>
 						<button onclick="snakeStop()">Stop</button>
-						<button onclick="snakeRestart()">Restart</button>`)
+						<button onclick="snakeRestart()">Restart</button>
+
+						<button onclick="updateApple()">updateApple</button>`)
 
 	document.Call("addEventListener", "keydown", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		event := args[0]
 		userInput <- event.Get("key").String()
 		return nil
 	}))
-	ticker.Ticker.Stop()
-	go handelUserInput(userInput)
-	go rungame(ticker)
+
+	startGame()
 	select {}
 }
 
-func rungame(ticker *games.GameTicker) {
-	game := snake.Game()
+func startGame() {
+	fmt.Println("Starting New Game")
+
+	gameContext, gameCancel = context.WithCancel(context.Background())
+
+	userInput = make(chan string, 2)
+
+	// starting snake
+	SetGame(snake.InitializeGameObjects(boardRows, boardCols))
+
 	s := snake.NewSnake(5, 5)
 
-	n := games.NewNode(5, 6)
-	s.Head().Next = n
+	Game().SetSnake(s)
+	snake.UpdateApple(Game())
 
-	n.Next = games.NewNode(5, 7)
-	game.SetSnake(s)
+	go gameTicker(gameContext, ticker)
+	go handelUserInput(gameContext, userInput)
 
+	snake.CreateBoardHtml("GameContainer", Game().Rows(), Game().Cols())
+	util.Render(Game())
+}
+
+func exitGame() {
+	if gameCancel != nil {
+		gameCancel()
+	}
+}
+
+func gameTicker(ctx context.Context, ticker *games.GameTicker) {
 	for {
 		select {
+		case <-ctx.Done():
+			return
 		case <-ticker.Tick():
+			game := Game()
 			// Update Snake
-			game.Snake().UpdateBasedOnVelocity()
-			//
 
+			lastCoord := games.Last(game.Snake().Head()).Coord()
+
+			event := game.Snake().UpdateBasedOnVelocity(game.Rows(), game.Cols())
+			if event != -1 {
+				fmt.Println("Update Event ", event)
+			}
+			event = snake.CollisionCheck(game.Snake(), game.Apple())
+
+			if event == snake.EventApple {
+				Game().Score += 1
+				snake.UpdateApple(game)
+				Game().Snake().AddNode(lastCoord.X(), lastCoord.Y())
+			}
+
+			if event != -1 {
+				fmt.Println("Update Event ", event)
+			}
 			// Render Updates
 			util.Render(game)
-			a, b := game.Snake().Velocity()
-			fmt.Printf("Velocity %d %d\n", a, b)
+			math.RandomInRange(0, int(math.Seed()))
+		}
+	}
+}
+
+func handelUserInput(ctx context.Context, userInput chan string) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case key := <-userInput:
+			func() {
+				defer recover()
+				fmt.Println(key)
+				snake.HandleUserInput(Game(), key)
+			}()
 		}
 	}
 }
 
 func ResetGame() {
-	snake.CreateBoardHtml("GameContainer", snake.Game().Rows(), snake.Game().Cols())
-}
-
-func handelUserInput(userInput chan string) {
-	// game := snake.Game()
-	for {
-		select {
-		case key := <-userInput:
-			func() {
-				defer recover()
-				fmt.Println(key)
-				snake.HandleUserInput(key)
-
-				// document := js.Global().Get("document")
-				// cell := document.Call("getElementById", fmt.Sprintf("cell%d-%d", game.Head().X(), game.Head().Y()))
-				// cell.Set("className", "grid-cell-snake")
-				// Render(game.Head().X(), game.Head().Y())
-			}()
-		}
-	}
+	snake.CreateBoardHtml("GameContainer", Game().Rows(), Game().Cols())
 }
 
 func insertHtml(divID, content string) {
@@ -114,8 +189,8 @@ func insertHtml(divID, content string) {
 }
 
 func SetTemplateColumns() {
-	js.Global().Get("document").Get("documentElement").Get("style").Call("setProperty", "--board-rows", snake.Game().Rows())
-	js.Global().Get("document").Get("documentElement").Get("style").Call("setProperty", "--board-cols", snake.Game().Cols())
+	js.Global().Get("document").Get("documentElement").Get("style").Call("setProperty", "--board-rows", Game().Rows())
+	js.Global().Get("document").Get("documentElement").Get("style").Call("setProperty", "--board-cols", Game().Cols())
 	// fmt.Sprintf("--board-rows:%d;", snake.Currme().Height))
 	// js.Global().Get("document").Get("documenvvctElement").Set("style", fmt.Sprintf("--board-cols:%d;", snake.CurrGame().Width))
 	// element := js.Global().Get("document").Call("getElementById", "gridcontainer")

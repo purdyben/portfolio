@@ -5,49 +5,38 @@ import (
 	"time"
 
 	"wasm/internal/games"
+	"wasm/internal/games/math"
 )
 
-var game *GameObject
-
-var seed int64 // Seed for the LCG
-
-func init() {
-	// Initialize the seed (you can use any initial value)
-	seed = 42
-	game = initializeGameObjects(20, 20)
-}
+const (
+	EventBounderyCollision = iota
+	EventSnakeCollision
+	EventApple
+)
 
 type GameObject struct {
 	boardRows int
 	boardCols int
-	startTime time.Time
+	StartTime time.Time
 
-	snake  *Snake
-	Apple  Apple
-	score  int
-	paused bool
+	snake *Snake
+	apple Apple
+
+	Score  int
+	Paused bool
 }
 
-type Apple struct {
-	Coord  games.Coordinate
-	Symbol rune
-}
-
-func initializeGameObjects(rows, cols int) *GameObject {
+func InitializeGameObjects(rows, cols int) *GameObject {
 	return &GameObject{
 		boardRows: rows,
 		boardCols: cols,
-		startTime: time.Now(),
+		StartTime: time.Now(),
 		snake:     NewSnake(1, 1),
-		Apple: Apple{
-			Coord:  games.NewCoordinate(rows/2, cols/2),
+		apple: Apple{
+			C:      games.NewCoordinate(rows/2, cols/2),
 			Symbol: rune('A'),
 		},
 	}
-}
-
-func Game() *GameObject {
-	return game
 }
 
 func (g *GameObject) Snake() *Snake {
@@ -55,7 +44,7 @@ func (g *GameObject) Snake() *Snake {
 }
 
 func (g *GameObject) SetSnake(s *Snake) {
-	game.snake = s
+	g.snake = s
 }
 
 func (g *GameObject) Head() *games.Node {
@@ -70,26 +59,19 @@ func (g *GameObject) Cols() int {
 	return g.boardCols
 }
 
-func Paused() bool {
-	return game.paused
-}
+func HandleUserInput(g *GameObject, key string) {
+	snake := g.Snake()
+	x := snake.Head().X()
+	y := snake.Head().Y()
 
-func HandleUserInput(key string) {
-	x := game.snake.Head().X()
-	y := game.snake.Head().Y()
-	snake := game.snake
 	switch key {
 	case "w":
 		if y-1 < 0 {
 			return
 		}
-		// snake.UpdateSnake(NewNode(games.NewCoordinate(x, y-1)))
 		snake.SetVelocity(-1, 0)
-		// fmt.Println("setting", -1, 0)
-		// a, b := snake.Velocity()
-		// fmt.Println("got", a, b)
 	case "s":
-		if y+1 > game.Cols() {
+		if y+1 > g.Cols() {
 			return
 		}
 		// snake.UpdateSnake(NewNode(games.NewCoordinate(x, y+1)))
@@ -101,7 +83,7 @@ func HandleUserInput(key string) {
 		// snake.SetHead(NewNode(games.NewCoordinate(x-1, y)))
 		snake.SetVelocity(0, -1)
 	case "d":
-		if x+1 > game.Rows() {
+		if x+1 > g.Rows() {
 			return
 		}
 		// snake.SetHead(NewNode(games.NewCoordinate(x+1, y)))
@@ -113,71 +95,81 @@ func HandleUserInput(key string) {
 	}
 }
 
-func lcg() int {
-	// LCG parameters (use appropriate values for your needs)
-	a, c, m := int64(1664525), int64(1013904223), int64(1<<31)
-
-	// Linear Congruential Generator formula
-	seed = (a*seed + c) % m
-
-	// Convert the result to an int
-	return int(seed)
-}
-
-func randomInRange(max, min int) int {
-	// Ensure the range is valid
-	if min >= max {
-		panic("Invalid range")
-	}
-
-	// Use lcg() to generate a random number within the range [min, max)
-	return min + lcg()%(max-min)
+func (g *GameObject) Apple() *Apple {
+	return &g.apple
 }
 
 func UpdateApple(g *GameObject) {
-	rr := randomInRange(g.Rows(), 0)
-	rc := randomInRange(g.Cols(), 0)
-	g.Apple = Apple{
-		Coord:  games.NewCoordinate(rr, rc),
+	var coord games.Coordinate
+	for {
+		rr := math.RandomInRange(0, g.Rows())
+		rc := math.RandomInRange(0, g.Cols())
+
+		coord = games.NewCoordinate(rr, rc)
+
+		if validCoords(g, coord) {
+			break
+		}
+	}
+	g.apple = Apple{
+		C:      coord,
 		Symbol: rune('A'),
 	}
 }
 
-func isSnakeEatingItself() bool {
-	return false
+func validCoords(g *GameObject, c games.Coordinate) bool {
+	curr := g.Snake().Head()
+	for curr != nil {
+		if curr.Coord().Equal(c) {
+			return false
+		}
+		curr = curr.Next
+	}
+
+	return true
 }
 
 // function to check if snake ate an apple and return a boolean result
-func isAppleInsideSnake() bool {
+func isAppleInsideSnake(s *Snake, a *Apple) bool {
+	if s.Head().Coord().Equal(a.Coord()) {
+		return true
+	}
 	return false
 }
 
-func GameState() string {
-	return GameStr()
+func isHeadInsideSnake(s *Snake) bool {
+	if s.Head() == nil {
+		panic("snake head nil")
+	}
+	headcoord := s.Head().Coord()
+
+	if s.Head().Next != nil {
+		curr := s.Head().Next
+		for curr != nil {
+			if curr.Coord().Equal(headcoord) {
+				return true
+			}
+			curr = curr.Next
+		}
+	}
+
+	return false
 }
 
-func GameStr() string {
-	r := ""
-	for y := range game.Rows() {
-		r += "<div>"
-		for x := range game.Cols() {
-			// fmt.Println(Head(), y, x)
-			if game.Head().X() == x && game.Head().Y() == y {
-				r += "[S]"
-			} else {
-				r += "[ ]"
-			}
-		}
-		r += "</div>\n"
-		// b = append(b, make([]int, game.width))
+func CollisionCheck(s *Snake, a *Apple) int {
+	// Check Apple
+	if isAppleInsideSnake(s, a) {
+		return EventApple
 	}
-	return r
+
+	// Check Collision with snake
+	if isHeadInsideSnake(s) {
+		return EventSnakeCollision
+	}
+
+	return -1
 }
 
 func isPaused(g *GameObject) bool {
-	return g.paused
-}
-
-func Pause() {
-	game.paused = !game.paused
+	return g.Paused
 }

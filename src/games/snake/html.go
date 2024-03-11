@@ -6,7 +6,7 @@ import (
 )
 
 func CreateBoardHtml(id string, rows, cols int) {
-	fmt.Println(rows, cols)
+	fmt.Println("Creating Board", rows, cols)
 	global := js.Global()
 	document := global.Get("document")
 
@@ -21,9 +21,15 @@ func CreateBoardHtml(id string, rows, cols int) {
 		// html += "</div>"
 	}
 	element := document.Call("getElementById", id)
+	element.Set("innerHTML", "")
+
 	newDiv := document.Call("createElement", "div")
 	newDiv.Set("className", "grid-container")
 	newDiv.Set("id", "gridcontainer")
 	newDiv.Set("innerHTML", html)
 	element.Call("appendChild", newDiv)
+
+	// gridcontainer := document.Call("getElementById", "gridcontainer")
+	// gridcontainer.Set("innerHTML", "")
+	// gridcontainer.Set("innerHTML", html)
 }
