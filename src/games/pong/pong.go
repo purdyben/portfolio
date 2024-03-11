@@ -1,8 +1,12 @@
 package pong
 
-import "wasm/internal/games"
+import (
+	"fmt"
 
-type Pong struct {
+	"wasm/internal/games"
+)
+
+type PongGameObject struct {
 	Player1 Player
 	Player2 Player
 	Ball    Ball
@@ -34,8 +38,8 @@ func NewBall() Ball {
 	}
 }
 
-func NewPong() Pong {
-	p := Pong{
+func NewPong() PongGameObject {
+	p := PongGameObject{
 		Player1: NewPlayer(0, 0),
 		Player2: NewPlayer(0, 0),
 		Ball:    NewBall(),
@@ -45,7 +49,7 @@ func NewPong() Pong {
 	return p
 }
 
-func Score(p *Pong, player int) {
+func Score(p *PongGameObject, player int) {
 	if player == 1 {
 		p.player1Score += 1
 	} else if player == 2 {
@@ -61,4 +65,26 @@ func Score(p *Pong, player int) {
 		p.Player2.matchscore += 1
 	}
 	// Reset Ball
+}
+
+func HandleUser1Input(g *PongGameObject, key string) {
+	switch key {
+	case "w":
+	case "s":
+	case " ":
+		fmt.Println("space pause")
+	case "r":
+		fmt.Println("r reset")
+	}
+}
+
+func HandleUser2Input(g *PongGameObject, key string) {
+	switch key {
+	case "ArrowUp":
+	case "ArrowDown":
+	case " ":
+		fmt.Println("space pause")
+	case "r":
+		fmt.Println("r reset")
+	}
 }

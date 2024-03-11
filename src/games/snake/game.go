@@ -65,24 +65,24 @@ func HandleUserInput(g *GameObject, key string) {
 	y := snake.Head().Y()
 
 	switch key {
-	case "w":
+	case "w", "ArrowUp":
 		if y-1 < 0 {
 			return
 		}
 		snake.SetVelocity(-1, 0)
-	case "s":
+	case "s", "ArrowDown":
 		if y+1 > g.Cols() {
 			return
 		}
 		// snake.UpdateSnake(NewNode(games.NewCoordinate(x, y+1)))
 		snake.SetVelocity(1, 0)
-	case "a":
+	case "a", "ArrowLeft":
 		if x-1 < 0 {
 			return
 		}
 		// snake.SetHead(NewNode(games.NewCoordinate(x-1, y)))
 		snake.SetVelocity(0, -1)
-	case "d":
+	case "d", "ArrowRight":
 		if x+1 > g.Rows() {
 			return
 		}
